@@ -7,48 +7,38 @@
 #include <jdbc/cppconn/resultset.h>
 #include "libs/json.hpp" 
 
-using json = nlohmann::json;
+#include "DB.h"
 
-struct DbConfig {
-    std::string host;
-    std::string user;
-    std::string password;
-    std::string database;
-};
-
-DbConfig loadConfig(const std::string& path) {
-    std::ifstream file(path);
-    json j;
-    file >> j;
-
-    return {
-        j["host"],
-        j["user"],
-        j["password"],
-        j["database"]
-    };
-}
-
-int main() {
+int main(void) {
     try {
-        DbConfig cfg = loadConfig("config.json");
 
-
-        sql::mysql::MySQL_Driver *driver;
-        std::unique_ptr<sql::Connection> con;
-
-        driver = sql::mysql::get_mysql_driver_instance();
-        con.reset(driver->connect(cfg.host, cfg.user, cfg.password));
-        con->setSchema(cfg.database);
+        DataBase* db = DataBase::getInstance();
+        sql::Connection* con = db->getConnection();
 
         std::unique_ptr<sql::Statement> stmt(con->createStatement());
         std::unique_ptr<sql::ResultSet> res(stmt->executeQuery("SELECT * FROM Car"));
 
+        sql::ResultSetMetaData* meta = res->getMetaData();
+        int columnCount = meta->getColumnCount();
+
+        for (int i = 1; i <= columnCount; ++i) {
+            std::cout << meta->getColumnName(i);
+            if (i < columnCount) std::cout << " | ";
+        }
+        std::cout << std::endl;
+
         while (res->next()) {
-            std::cout << res->getString(1) << std::endl;
+            for (int i = 1; i <= columnCount; ++i) {
+                std::cout << res->getString(i);
+                if (i < columnCount) std::cout << " | ";
+            }
+            std::cout << std::endl;
         }
     }
-    catch (sql::SQLException &e) {
-        std::cerr << "SQLException: " << e.what() << std::endl;
+    catch (std::exception& e) {
+        std::cerr << "Error: " << e.what() << std::endl;
     }
+
+
+    return 0;
 }
