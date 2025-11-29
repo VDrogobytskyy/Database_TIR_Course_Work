@@ -1,16 +1,7 @@
 CXX = g++
-
-CXXFLAGS = -std=c++17 \
-    -I/usr/local/mysql-connector-c++-9.5.0/include \
-    -I/usr/local/mysql-connector-c++-9.5.0/include/jdbc \
-    -I./libs
-
-LDFLAGS = -L/Applications/MySQLWorkbench.app/Contents/Frameworks \
-    -lmysqlcppconn \
-    -Wl,-rpath,/Applications/MySQLWorkbench.app/Contents/Frameworks
-
+CXXFLAGS = -std=c++17 -I/opt/homebrew/include -I./libs
+LDFLAGS = -L/opt/homebrew/Cellar/mysql-connector-c++/9.5.0/lib -lmysqlcppconnx
 TARGET = app
-
 SRCS = main.cpp DB.cpp
 OBJS = $(SRCS:.cpp=.o)
 

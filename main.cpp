@@ -1,44 +1,34 @@
 #include <iostream>
-#include <fstream>
-#include <memory>
-#include <jdbc/mysql_driver.h>
-#include <jdbc/mysql_connection.h>
-#include <jdbc/cppconn/statement.h>
-#include <jdbc/cppconn/resultset.h>
-#include "libs/json.hpp" 
-
 #include "DB.h"
 
-int main(void) {
+int main() {
     try {
-
         DataBase* db = DataBase::getInstance();
-        sql::Connection* con = db->getConnection();
+        mysqlx::Session* session = db->getSession();
 
-        std::unique_ptr<sql::Statement> stmt(con->createStatement());
-        std::unique_ptr<sql::ResultSet> res(stmt->executeQuery("SELECT * FROM Car"));
+        // Отримуємо схему і таблицю
+        mysqlx::Schema schema = session->getSchema("TIR");
+        mysqlx::Table car = schema.getTable("Car");
 
-        sql::ResultSetMetaData* meta = res->getMetaData();
-        int columnCount = meta->getColumnCount();
+        // Виконуємо SELECT *
+        mysqlx::RowResult res = car.select("*").execute();
 
-        for (int i = 1; i <= columnCount; ++i) {
-            std::cout << meta->getColumnName(i);
-            if (i < columnCount) std::cout << " | ";
-        }
-        std::cout << std::endl;
-
-        while (res->next()) {
-            for (int i = 1; i <= columnCount; ++i) {
-                std::cout << res->getString(i);
-                if (i < columnCount) std::cout << " | ";
+        // Виводимо результат
+        for (mysqlx::Row row : res) { 
+            for (unsigned int i = 0; i < row.colCount(); ++i) {
+                std::cout << row[i] << " | ";
             }
             std::cout << std::endl;
         }
-    }
-    catch (std::exception& e) {
-        std::cerr << "Error: " << e.what() << std::endl;
-    }
 
+        session->close();
+    }
+    catch (const mysqlx::Error &err) {
+        std::cerr << "MySQL Error: " << err.what() << std::endl;
+    }
+    catch (const std::exception &ex) {
+        std::cerr << "Error: " << ex.what() << std::endl;
+    }
 
     return 0;
 }

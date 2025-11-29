@@ -1,47 +1,42 @@
 #include "DB.h"
-
-#include <iostream>
 #include <fstream>
-
-
-DataBase* DataBase::instance = nullptr;
+#include <iostream>
+#include "libs/json.hpp"
 
 using json = nlohmann::json;
 
+DataBase* DataBase::instance = nullptr;
+
 DbConfig DataBase::loadConfig(const std::string& path) {
     std::ifstream file(path);
-
     if (!file.is_open()) {
         throw std::runtime_error("Cannot open config.json");
     }
-
     json j;
     file >> j;
 
     return {
-        j["host"],
-        j["user"],
-        j["password"],
-        j["database"]
+        j["host"].get<std::string>(),
+        j["port"].get<unsigned int>(),
+        j["user"].get<std::string>(),
+        j["password"].get<std::string>(),
+        j["database"].get<std::string>()
     };
 }
 
-DataBase::DataBase(){
-    try{
+DataBase::DataBase() {
+    try {
         config = loadConfig("config.json");
-
-        driver = sql::mysql::get_mysql_driver_instance();
-        connection.reset(driver->connect(config.host, config.user, config.password));
-        connection->setSchema(config.database);
-
-        std::cout << "DataBase opened successfully" << std::endl;
+        session = std::make_unique<mysqlx::Session>(
+            config.host, config.port, config.user, config.password, config.database
+        );
+        std::cout << "Database connected successfully" << std::endl;
     }
-    catch (sql::SQLException& e) {
-        std::cerr << "SQL Error: " << e.what() << std::endl;
+    catch (const mysqlx::Error &err) {
+        std::cerr << "MySQL Error: " << err.what() << std::endl;
         throw;
     }
 }
-
 
 DataBase* DataBase::getInstance() {
     if (!instance) {
@@ -50,7 +45,6 @@ DataBase* DataBase::getInstance() {
     return instance;
 }
 
-
-sql::Connection* DataBase::getConnection() {
-    return connection.get();
+mysqlx::Session* DataBase::getSession() {
+    return session.get();
 }
